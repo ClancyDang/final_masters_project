@@ -1,0 +1,35 @@
+# Licensed datasets and derived event data
+/data/raw/
+/data/processed/
+
+# Python environments and caches
+/.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Local temporary and rendered files
+/tmp/
+.DS_Store
+
+# Editor and agent-specific state
+/.agents/
+/.claude/
+.vscode/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Local databases and write-ahead files
+*.db
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm

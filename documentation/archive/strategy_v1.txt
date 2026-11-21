@@ -1,0 +1,24 @@
+For Route B
+1. Use the five domestic league player-season tables as the candidate universe.
+2. Use raw events to add role-specific and spatial metrics.
+3. Use UEFA data as supplementary evidence, with coverage warnings.
+4. Use player IDs as the main join key.
+5. Deduplicate matches and transferred-player records explicitly.
+6. Apply a minimum-minutes threshold before ranking players.
+7. Calculate per-90 values and role-specific league percentiles.
+8. Compare candidates with the chosen club’s current players.
+9. Add an external dataset for age, contract, transfer value and wages.
+10. Keep every recommendation traceable to competition, season, sample size, method and limitation.
+
+
+Technologies:
+- Frontend/application: Streamlit
+- Data processing: pandas (and/or Polars)
+- Analytical database: DuckDB
+- Storage: Parquet
+- Football visualisations: mplsoccer
+- Interactive charts: Plotly
+- Static charts/reports: Matplotlib
+- Testing: pytest
+- Code quality: Ruff
+- Version control: GitHub
