@@ -44,16 +44,21 @@ Do not publish, redistribute or deploy the supplied data without confirming the 
 │   └── initial_plan_and_goal.md
 ├── notebooks/
 │   ├── 01_forest_defender_data_import.ipynb
-│   └── 02_position_mapping_validation.ipynb
+│   ├── 02_position_mapping_validation.ipynb
+│   └── 03_premier_league_pipeline_validation.ipynb
 ├── scripts/
+│   ├── build_league_data.py
 │   └── build_streamlit_data.py
 ├── src/
+│   ├── data/
+│   │   └── premier_league_pipeline.py
 │   ├── positions/
 │   │   └── formation_mapping.py
 │   └── visualizations/
 │       └── positional_maps.py
 ├── tests/
 │   ├── test_formation_mapping.py
+│   ├── test_premier_league_pipeline.py
 │   └── test_positional_maps.py
 ├── THIRD_PARTY_NOTICES.md
 ├── .python-version
@@ -92,7 +97,26 @@ data/processed/forest_eligible_defender_appearances.parquet
 data/processed/forest_eligible_positional_actions.parquet
 ```
 
-The current build script executes the validated preparation cells from the source notebook. Moving this cleaning logic into a reusable `src/data/` module is planned as a future refactor.
+The Forest-only Streamlit build script still executes the validated preparation cells from the source notebook. The league-wide build uses the reusable `src/data/premier_league_pipeline.py` module; migrating the remaining Forest-only build onto that module is a later refactor.
+
+## Build the league-wide processed data
+
+To rebuild the validated Premier League appearance and positional-action tables, run:
+
+```bash
+.venv/bin/python scripts/build_league_data.py
+```
+
+This reads each available match payload once, reconstructs appearances for all 20 teams, applies the formation-position mapping and writes:
+
+```text
+data/processed/premier_league_eligible_appearances.parquet
+data/processed/premier_league_eligible_positional_actions.parquet
+data/processed/premier_league_centre_back_appearances.parquet
+data/processed/premier_league_pipeline_quality_checks.csv
+```
+
+All four outputs remain local and ignored by Git. The current package contains 380 indexed fixtures and 361 available event payloads; missing payloads are reported rather than silently dropped.
 
 ## Run the Streamlit application
 
@@ -127,7 +151,7 @@ They validate coordinate handling, zone counts, normalized shares and traditiona
 
 ## Current limitations
 
-- The initial analysis includes Nottingham Forest defenders only.
+- The Streamlit interface still displays Nottingham Forest defenders only; the validated processing pipeline now covers all 20 Premier League teams.
 - The position mapping currently classifies starting formation slots; substitute slot `0` and later in-match role changes still need additional provider events.
 - Two Forest match payloads are missing.
 - Carries have not been inferred.
@@ -141,6 +165,7 @@ They validate coordinate handling, zone counts, normalized shares and traditiona
 - [Day 1 progress and learning log](documentation/day_1.md)
 - [Source notebook](notebooks/01_forest_defender_data_import.ipynb)
 - [Position-mapping validation notebook](notebooks/02_position_mapping_validation.ipynb)
+- [Premier League pipeline validation notebook](notebooks/03_premier_league_pipeline_validation.ipynb)
 - [Third-party mapping attribution](THIRD_PARTY_NOTICES.md)
 
 ## Project direction
