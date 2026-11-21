@@ -171,7 +171,11 @@ def build_action_location_figure(
         plots.append((LAYOUT_TRADITIONAL, traditional_bins, traditional_distribution))
 
     figure_width = 12 if len(plots) == 2 else 6
-    figure, axes = pitch.draw(nrows=1, ncols=len(plots), figsize=(figure_width, 8))
+    figure, axes = pitch.draw(
+        nrows=1,
+        ncols=len(plots),
+        figsize=(figure_width, 5.6),
+    )
     axes = np.atleast_1d(axes)
 
     for axis, (plot_name, bins, distribution) in zip(axes, plots):
@@ -204,15 +208,15 @@ def build_action_location_figure(
             zorder=3,
         )
         _annotate_zones(pitch, axis, distribution, label_effects)
-        axis.set_title(f"{plot_name} layout", color="white", fontsize=14, pad=10)
+        axis.set_title(f"{plot_name} layout", color="white", fontsize=12, pad=6)
 
     match_date = pd.Timestamp(appearance["match_date"])
     figure.patch.set_facecolor("#22312b")
     figure.suptitle(
         f"{appearance['player_name']} — {appearance['match_description']}",
         color="white",
-        fontsize=17,
-        y=0.98,
+        fontsize=14,
+        y=0.985,
     )
     figure.text(
         0.5,
@@ -223,7 +227,7 @@ def build_action_location_figure(
             f"{int(appearance['action_count'])} direct actions"
         ),
         color="#d9e2df",
-        fontsize=11,
+        fontsize=9,
         ha="center",
     )
     figure.text(
@@ -231,10 +235,10 @@ def build_action_location_figure(
         0.02,
         "Values show each zone's share of recorded direct-action start locations.",
         color="#d9e2df",
-        fontsize=10,
+        fontsize=8.5,
         ha="center",
     )
-    figure.subplots_adjust(top=0.88, bottom=0.07, wspace=0.08)
+    figure.subplots_adjust(top=0.84, bottom=0.08, wspace=0.08)
 
     return figure, positional_distribution, traditional_distribution
 
@@ -343,10 +347,17 @@ def build_player_template_comparison_figure(
         path_effects.Normal(),
     ]
 
-    figure, axes = pitch.draw(nrows=1, ncols=3, figsize=(15, 8.5))
+    figure, axes = pitch.draw(nrows=1, ncols=3, figsize=(16, 5.8))
     axes = np.atleast_1d(axes)
     panels = [
-        ("Player profile", player_bins, "player_share", "cividis", 0, sequential_max),
+        (
+            f"{player_name} profile",
+            player_bins,
+            "player_share",
+            "cividis",
+            0,
+            sequential_max,
+        ),
         (
             "League CB baseline",
             template_bins,
@@ -382,22 +393,16 @@ def build_player_template_comparison_figure(
                 path_effects=label_effects,
                 zorder=4,
             )
-        axis.set_title(title, color="white", fontsize=13, pad=8)
+        axis.set_title(title, color="white", fontsize=11.5, pad=5)
 
     figure.patch.set_facecolor("#22312b")
-    figure.suptitle(
-        f"{player_name} compared with the Premier League centre-back template",
-        color="white",
-        fontsize=16,
-        y=0.985,
-    )
     figure.text(
         0.5,
         0.015,
         "Difference map: red = higher share than the baseline; blue = lower share.",
         color="#d9e2df",
-        fontsize=10,
+        fontsize=8.5,
         ha="center",
     )
-    figure.subplots_adjust(top=0.79, bottom=0.07, wspace=0.06)
+    figure.subplots_adjust(top=0.91, bottom=0.08, wspace=0.05)
     return figure

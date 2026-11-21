@@ -15,6 +15,7 @@ The application currently allows a user to:
 - View zone-level counts and normalized action shares.
 - Compare any Forest centre-back profile with the league template in either zone layout.
 - Inspect zone differences, peer percentiles, sample size and an overall similarity score.
+- Validate the Forest comparison with appearance-level bootstrap intervals, split-half stability, layout robustness and separate pass/defensive-action profiles.
 - Read the current methodology and limitations.
 
 The maps describe the locations where recorded direct actions began. They do **not** measure continuous player occupancy, which would require tracking data.
@@ -48,15 +49,23 @@ Do not publish, redistribute or deploy the supplied data without confirming the 
 │   ├── 01_forest_defender_data_import.ipynb
 │   ├── 02_position_mapping_validation.ipynb
 │   ├── 03_premier_league_pipeline_validation.ipynb
-│   └── 04_centre_back_template_validation.ipynb
+│   ├── 04_centre_back_template_validation.ipynb
+│   ├── 05_forest_centre_back_results_validation.ipynb
+│   └── 06_wide_defender_results_validation.ipynb
 ├── scripts/
 │   ├── build_centre_back_templates.py
 │   ├── build_league_data.py
-│   └── build_streamlit_data.py
+│   ├── build_streamlit_data.py
+│   ├── build_wide_defender_templates.py
+│   ├── validate_forest_centre_backs.py
+│   └── validate_forest_wide_defenders.py
 ├── src/
 │   ├── analysis/
 │   │   ├── centre_back_templates.py
-│   │   └── player_template_comparison.py
+│   │   ├── centre_back_validation.py
+│   │   ├── player_template_comparison.py
+│   │   ├── wide_defender_templates.py
+│   │   └── wide_defender_validation.py
 │   ├── data/
 │   │   └── premier_league_pipeline.py
 │   ├── positions/
@@ -66,9 +75,11 @@ Do not publish, redistribute or deploy the supplied data without confirming the 
 ├── tests/
 │   ├── test_formation_mapping.py
 │   ├── test_centre_back_templates.py
+│   ├── test_centre_back_validation.py
 │   ├── test_player_template_comparison.py
 │   ├── test_premier_league_pipeline.py
-│   └── test_positional_maps.py
+│   ├── test_positional_maps.py
+│   └── test_wide_defender_templates.py
 ├── THIRD_PARTY_NOTICES.md
 ├── .python-version
 ├── requirements.txt
@@ -144,6 +155,55 @@ data/processed/centre_back_league_templates.parquet
 data/processed/centre_back_template_quality_checks.csv
 ```
 
+## Validate the Forest centre-back results
+
+After building the centre-back templates, run:
+
+```bash
+.venv/bin/python scripts/validate_forest_centre_backs.py
+```
+
+This creates ignored local tables covering provider-role agreement, zone-level
+differences, appearance-level bootstrap intervals, repeated split-half stability,
+league-wide 18-versus-20-zone robustness and pass/defensive-action sensitivity.
+Review the results in
+`notebooks/05_forest_centre_back_results_validation.ipynb`.
+
+## Build the full-back and wing-back templates
+
+After building the league-wide appearance and action tables, run:
+
+```bash
+.venv/bin/python scripts/build_wide_defender_templates.py
+```
+
+This creates three template groups for each wide-defender role:
+
+- Left full-back, right full-back and overarching full-back.
+- Left wing-back, right wing-back and overarching wing-back.
+
+Side-specific profiles retain the original coordinates. For each overarching
+profile, right-sided actions use `role_normalised_y = 100 - original_y`, while
+left-sided actions remain unchanged. This aligns tactically equivalent actions
+without overwriting the source coordinates. The ignored `*_role_actions.parquet`
+outputs retain both `original_y` and `role_normalised_y` for auditing.
+Appearance profiles are averaged equally within each player and qualifying
+players are averaged equally within each league template, using the same
+five-appearance threshold as centre-backs.
+
+## Validate the Forest full-back and wing-back results
+
+After building the wide-defender templates, run:
+
+```bash
+.venv/bin/python scripts/validate_forest_wide_defenders.py
+```
+
+This validates original-side and mirrored orientation, appearance-level bootstrap
+uncertainty, repeated split-half stability, 18-versus-20-zone sensitivity and
+pass/defensive-action sensitivity. Review the outputs in
+`notebooks/06_wide_defender_results_validation.ipynb`.
+
 ## Run the Streamlit application
 
 ```bash
@@ -160,7 +220,7 @@ The initial tests use Python's standard-library test runner:
 MPLBACKEND=Agg .venv/bin/python -m unittest discover -s tests -v
 ```
 
-They validate coordinate handling, zone counts, normalized shares, traditional zone orientation, template averaging, leave-one-out baselines and similarity calculations without requiring the licensed data.
+They validate coordinate handling, zone counts, normalized shares, traditional zone orientation, template averaging, leave-one-out baselines, similarity calculations and the validation workflow without requiring the licensed data.
 
 ## Method summary
 
@@ -174,9 +234,13 @@ They validate coordinate handling, zone counts, normalized shares, traditional z
 - The traditional map contains 18 equal zones arranged as six length bands by three width bands.
 - Provider formation codes and lineup slots are decoded separately from the project's standardised position rules.
 - Unknown formations, unknown provider positions and bench slot `0` remain explicitly unresolved rather than being guessed.
-- Each match profile is normalized to 100%; matches are averaged equally within a player, and qualifying players are averaged equally within the centre-back league template.
+- Each match profile is normalized to 100%; matches are averaged equally within a player, and qualifying players are averaged equally within each positional league template.
 - Qualified Forest players are compared with a leave-one-out template; provisional players are compared with the full qualified template.
 - Overall similarity is `100 × (1 − total variation distance)` and describes spatial typicality, not player quality.
+- Bootstrap intervals resample complete match appearances rather than individual actions; the league baseline remains fixed, so the interval represents uncertainty in the player's appearance sample rather than uncertainty in the template itself.
+- Split-half stability is reported only for players with at least ten eligible appearances.
+- Pass-only and defensive-action profiles are recalculated separately to show how action selection affects the result.
+- Full-back and wing-back outputs retain side-specific templates and add a role-normalised overarching template by mirroring right-sided width coordinates onto the left.
 
 ## Current limitations
 
@@ -184,8 +248,11 @@ They validate coordinate handling, zone counts, normalized shares, traditional z
 - The position mapping currently classifies starting formation slots; substitute slot `0` and later in-match role changes still need additional provider events.
 - Two Forest match payloads are missing.
 - Carries have not been inferred.
-- High-volume passes may dominate the combined direct-action map.
-- The first league-wide centre-back template comparison is available; role clusters and scouting-performance measures have not yet been added.
+- High-volume passes may dominate the combined direct-action map, so separate action-family results should accompany interpretation.
+- Jair Cunha has only three eligible appearances and remains provisional; his profile cannot yet support split-half validation.
+- No Forest player currently has five eligible wing-back appearances, so all Forest wing-back comparisons will initially be provisional.
+- The full-back zone layouts broadly agree but are less interchangeable than the centre-back layouts; both should remain available in interpretation.
+- The centre-back comparison has been validated as a reference implementation; role clusters, remaining position groups and scouting-performance measures have not yet been added.
 - Public deployment is blocked until data-sharing permissions are confirmed.
 
 ## Documentation
@@ -196,6 +263,8 @@ They validate coordinate handling, zone counts, normalized shares, traditional z
 - [Position-mapping validation notebook](notebooks/02_position_mapping_validation.ipynb)
 - [Premier League pipeline validation notebook](notebooks/03_premier_league_pipeline_validation.ipynb)
 - [Centre-back template validation notebook](notebooks/04_centre_back_template_validation.ipynb)
+- [Forest centre-back results validation notebook](notebooks/05_forest_centre_back_results_validation.ipynb)
+- [Wide-defender results validation notebook](notebooks/06_wide_defender_results_validation.ipynb)
 - [Third-party mapping attribution](THIRD_PARTY_NOTICES.md)
 
 ## Project direction

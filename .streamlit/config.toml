@@ -1,0 +1,10 @@
+[theme]
+metricValueFontSize = "1.75rem"
+
+[theme.light]
+paddingTop = "0.5rem"
+paddingBottom = "0.5rem"
+
+[theme.dark]
+paddingTop = "0.5rem"
+paddingBottom = "0.5rem"

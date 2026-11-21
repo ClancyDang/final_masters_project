@@ -17,4 +17,19 @@ positional-action, centre-back and quality-check outputs under the same ignored
 Running `scripts/build_centre_back_templates.py` creates ignored appearance-zone,
 player-zone and league-template outputs for the 18-zone and 20-zone layouts.
 
+Running `scripts/validate_forest_centre_backs.py` creates ignored Forest validation
+tables for spatial interpretation, bootstrap uncertainty, split-half stability,
+zone-layout robustness and action-family sensitivity.
+
+Running `scripts/build_wide_defender_templates.py` creates ignored appearance,
+player and league-template tables for left, right and role-normalised overarching
+full-back and wing-back groups. Original coordinates remain available in the
+side-specific profiles; right-sided width coordinates are mirrored only for the
+overarching role-normalised profiles.
+
+Running `scripts/validate_forest_wide_defenders.py` creates ignored validation
+tables for Forest full-backs and wing-backs, covering orientation, bootstrap
+uncertainty, split-half stability, zone-layout robustness and action-family
+sensitivity.
+
 Do not publish or redistribute raw or processed event data without explicit permission from the provider and the university.

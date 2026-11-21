@@ -63,21 +63,19 @@ def load_centre_back_profiles() -> pd.DataFrame:
     return pd.read_parquet(CB_PROFILE_PATH)
 
 
-st.title("ScoutAgent: Nottingham Forest positional profiles")
-selected_view = st.segmented_control(
-    "Analysis view",
-    [VIEW_MATCH, VIEW_COMPARISON],
-    default=VIEW_MATCH,
-    required=True,
-    key="analysis_view",
-)
-
-if selected_view == VIEW_MATCH:
-    st.caption(
-        "Explore where Forest defenders recorded direct actions during eligible "
-        "appearances of at least 60 minutes."
+heading_col, view_col = st.columns([1.6, 1], vertical_alignment="bottom")
+heading_col.header("ScoutAgent · Forest positional profiles")
+with view_col:
+    selected_view = st.segmented_control(
+        "Analysis view",
+        [VIEW_MATCH, VIEW_COMPARISON],
+        default=VIEW_MATCH,
+        required=True,
+        key="analysis_view",
+        width="stretch",
     )
 
+if selected_view == VIEW_MATCH:
     if not APPEARANCE_PATH.exists() or not ACTION_PATH.exists():
         st.error(
             "Processed match data is missing. Run "
@@ -86,7 +84,11 @@ if selected_view == VIEW_MATCH:
         st.stop()
 
     appearances, actions = load_match_data()
-    control_col_1, control_col_2, control_col_3 = st.columns([1, 2, 1.4])
+    control_col_1, control_col_2, control_col_3 = st.columns(
+        [1, 2, 1.4],
+        vertical_alignment="bottom",
+        gap="small",
+    )
 
     with control_col_1:
         player_names = sorted(appearances["player_name"].dropna().unique())
@@ -141,18 +143,18 @@ if selected_view == VIEW_MATCH:
         & actions["player_id"].eq(selected_appearance["player_id"])
     ].copy()
 
-    metric_col_1, metric_col_2, metric_col_3 = st.columns(3)
+    metric_col_1, metric_col_2, metric_col_3 = st.columns(3, gap="small")
     metric_col_1.metric(
         "Minutes played",
         f"{selected_appearance['minutes_played']:.1f}",
-        border=True,
+        border=False,
     )
     metric_col_2.metric(
         "Direct actions",
         f"{int(selected_appearance['action_count'])}",
-        border=True,
+        border=False,
     )
-    metric_col_3.metric("Eligibility rule", "60+ minutes", border=True)
+    metric_col_3.metric("Eligibility rule", "60+ minutes", border=False)
 
     figure, positional_distribution, traditional_distribution = (
         build_action_location_figure(
@@ -161,11 +163,13 @@ if selected_view == VIEW_MATCH:
             layout=selected_layout,
         )
     )
-    st.pyplot(
-        figure,
-        width="stretch",
-        alt=f"Action-location maps for {selected_player} in the selected match",
-    )
+    chart_width = 1100 if selected_layout == LAYOUT_BOTH else 560
+    with st.container(horizontal_alignment="center"):
+        st.pyplot(
+            figure,
+            width=chart_width,
+            alt=f"Action-location maps for {selected_player} in the selected match",
+        )
     close_figure(figure)
 
     with st.expander("View underlying zone distributions"):
@@ -198,11 +202,6 @@ if selected_view == VIEW_MATCH:
         )
 
 else:
-    st.caption(
-        "Compare each Forest centre-back's average action-location profile with an "
-        "independent Premier League centre-back baseline."
-    )
-
     if not CB_PROFILE_PATH.exists():
         st.error(
             "Centre-back profiles are missing. Run "
@@ -223,7 +222,11 @@ else:
         zip(forest_players["player_name"], forest_players["player_id"])
     )
 
-    control_col_1, control_col_2 = st.columns(2)
+    control_col_1, control_col_2 = st.columns(
+        2,
+        vertical_alignment="bottom",
+        gap="small",
+    )
     with control_col_1:
         comparison_player = st.selectbox(
             "Forest centre-back",
@@ -242,6 +245,7 @@ else:
             default="Positional 20-zone",
             required=True,
             key="comparison_layout",
+            width="stretch",
         )
 
     comparison = compare_player_to_template(
@@ -262,23 +266,26 @@ else:
             icon=":material/info:",
         )
 
-    metric_col_1, metric_col_2, metric_col_3, metric_col_4 = st.columns(4)
+    metric_col_1, metric_col_2, metric_col_3, metric_col_4 = st.columns(
+        4,
+        gap="small",
+    )
     metric_col_1.metric(
         "Template similarity",
         f"{comparison.similarity_score:.1f}/100",
-        border=True,
+        border=False,
         help="100 means an identical zone distribution; 0 means no overlap.",
     )
     metric_col_2.metric(
         "Typicality percentile",
         format_ordinal(comparison.similarity_percentile),
-        border=True,
+        border=False,
         help="Rank of the similarity score among qualified league centre-backs.",
     )
     metric_col_3.metric(
         "Eligible appearances",
         comparison.eligible_appearances,
-        border=True,
+        border=False,
         help=(
             f"{format_ordinal(comparison.appearance_count_percentile)} percentile among all "
             "centre-back player profiles."
@@ -287,30 +294,26 @@ else:
     metric_col_4.metric(
         "Direct actions",
         comparison.total_actions,
-        border=True,
+        border=False,
         help=(
             f"{format_ordinal(comparison.action_count_percentile)} percentile among all "
             "centre-back player profiles."
         ),
     )
-    st.caption(
-        "Similarity measures how conventional the spatial distribution is relative to "
-        "league centre-backs. A higher score does not mean a better player."
-    )
-
     comparison_figure = build_player_template_comparison_figure(
         comparison.zone_comparison,
         comparison.player_name,
         comparison.layout,
     )
-    st.pyplot(
-        comparison_figure,
-        width="stretch",
-        alt=(
-            f"{comparison.player_name} action-location profile, league centre-back "
-            "baseline, and zone differences"
-        ),
-    )
+    with st.container(horizontal_alignment="center"):
+        st.pyplot(
+            comparison_figure,
+            width=1200,
+            alt=(
+                f"{comparison.player_name} action-location profile, league centre-back "
+                "baseline, and zone differences"
+            ),
+        )
     close_figure(comparison_figure)
 
     table = comparison.zone_comparison[
@@ -373,6 +376,7 @@ else:
             - This player's baseline is the equal-weighted mean of {baseline_description}.
             - Zone difference is `player share − baseline share`, shown in percentage points.
             - Similarity is `100 × (1 − total variation distance)` across all zones.
+            - A higher similarity score means a more conventional spatial profile, not a better player.
             - Zone percentiles compare the player's share with the independent peer distribution.
             - Only high-confidence centre-back appearances of at least 60 minutes are used.
             """

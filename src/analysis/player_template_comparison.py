@@ -27,6 +27,7 @@ class PlayerTemplateComparison:
     player_id: str
     player_name: str
     layout: str
+    template_group: str | None
     zone_comparison: pd.DataFrame
     similarity_score: float
     similarity_percentile: float
@@ -85,9 +86,14 @@ def _validate_profiles(player_profiles: pd.DataFrame) -> None:
     missing = required.difference(player_profiles.columns)
     if missing:
         raise ValueError(f"Player profiles are missing columns: {sorted(missing)}")
-    if player_profiles.duplicated(PROFILE_KEY).any():
+    grouping_columns = (
+        ["template_group"] if "template_group" in player_profiles.columns else []
+    )
+    if player_profiles.duplicated([*grouping_columns, *PROFILE_KEY]).any():
         raise ValueError("Player profile keys must be unique")
-    share_sums = player_profiles.groupby(["player_id", "layout"])[
+    share_sums = player_profiles.groupby(
+        [*grouping_columns, "player_id", "layout"]
+    )[
         "mean_action_share"
     ].sum()
     if not np.isclose(share_sums, 1.0).all():
@@ -122,10 +128,31 @@ def compare_player_to_template(
     player_profiles: pd.DataFrame,
     player_id: str,
     layout: str,
+    template_group: str | None = None,
 ) -> PlayerTemplateComparison:
-    """Compare one player profile with an independent league CB baseline."""
+    """Compare one player profile with an independent positional baseline."""
     _validate_profiles(player_profiles)
-    layout_profiles = player_profiles.loc[player_profiles["layout"].eq(layout)].copy()
+    comparison_profiles = player_profiles
+    if "template_group" in player_profiles.columns:
+        available_groups = sorted(player_profiles["template_group"].unique())
+        if template_group is None:
+            if len(available_groups) != 1:
+                raise ValueError(
+                    "template_group is required when profiles contain multiple "
+                    f"groups: {available_groups}"
+                )
+            template_group = available_groups[0]
+        comparison_profiles = player_profiles.loc[
+            player_profiles["template_group"].eq(template_group)
+        ]
+        if comparison_profiles.empty:
+            raise ValueError(f"Unknown template group: {template_group}")
+    elif template_group is not None:
+        raise ValueError("Profiles do not contain a template_group column")
+
+    layout_profiles = comparison_profiles.loc[
+        comparison_profiles["layout"].eq(layout)
+    ].copy()
     if layout_profiles.empty:
         raise ValueError(f"Unknown layout: {layout}")
 
@@ -198,7 +225,7 @@ def compare_player_to_template(
         qualifying_scores,
     )
 
-    player_summaries = player_profiles[SUMMARY_COLUMNS].drop_duplicates("player_id")
+    player_summaries = layout_profiles[SUMMARY_COLUMNS].drop_duplicates("player_id")
     eligible_appearances = int(selected_summary["eligible_appearances"])
     total_actions = int(selected_summary["total_actions"])
 
@@ -206,6 +233,7 @@ def compare_player_to_template(
         player_id=str(player_id),
         player_name=str(selected_summary["player_name"]),
         layout=layout,
+        template_group=template_group,
         zone_comparison=zone_comparison,
         similarity_score=similarity_score,
         similarity_percentile=similarity_percentile,
