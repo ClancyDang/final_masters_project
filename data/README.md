@@ -32,4 +32,14 @@ tables for Forest full-backs and wing-backs, covering orientation, bootstrap
 uncertainty, split-half stability, zone-layout robustness and action-family
 sensitivity.
 
+Running `scripts/build_remaining_position_templates.py` creates ignored role-action,
+appearance, player, league-template, coverage and quality-check outputs for
+goalkeepers, midfield roles, wingers and forwards. Template coverage requires at
+least two qualifying players so independent comparison remains possible.
+
+Running `scripts/validate_forest_position_groups.py` creates ignored validation
+tables for Forest goalkeepers, supported midfield roles, wingers and forwards.
+The outputs cover bootstrap uncertainty, split-half stability, layout robustness
+and action-family sensitivity.
+
 Do not publish or redistribute raw or processed event data without explicit permission from the provider and the university.

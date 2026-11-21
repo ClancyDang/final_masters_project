@@ -21,6 +21,65 @@ APPEARANCE_PATH = PROCESSED_DIR / "forest_eligible_defender_appearances.parquet"
 ACTION_PATH = PROCESSED_DIR / "forest_eligible_positional_actions.parquet"
 CB_PROFILE_PATH = PROCESSED_DIR / "centre_back_player_zone_profiles.parquet"
 
+COMPARISON_SOURCES = {
+    "Centre-back": {
+        "profile_path": CB_PROFILE_PATH,
+        "coverage_path": None,
+        "mirrored_overarching": False,
+    },
+    "Full-back": {
+        "profile_path": PROCESSED_DIR / "full_back_player_zone_profiles.parquet",
+        "coverage_path": None,
+        "mirrored_overarching": True,
+    },
+    "Wing-back": {
+        "profile_path": PROCESSED_DIR / "wing_back_player_zone_profiles.parquet",
+        "coverage_path": None,
+        "mirrored_overarching": True,
+    },
+    "Goalkeeper": {
+        "profile_path": PROCESSED_DIR / "goalkeeper_player_zone_profiles.parquet",
+        "coverage_path": PROCESSED_DIR / "goalkeeper_template_coverage.csv",
+        "mirrored_overarching": False,
+    },
+    "Central midfield": {
+        "profile_path": PROCESSED_DIR / "central_midfield_player_zone_profiles.parquet",
+        "coverage_path": PROCESSED_DIR / "central_midfield_template_coverage.csv",
+        "mirrored_overarching": True,
+    },
+    "Attacking midfield": {
+        "profile_path": PROCESSED_DIR / "attacking_midfield_player_zone_profiles.parquet",
+        "coverage_path": PROCESSED_DIR / "attacking_midfield_template_coverage.csv",
+        "mirrored_overarching": True,
+    },
+    "Wide midfield": {
+        "profile_path": PROCESSED_DIR / "wide_midfield_player_zone_profiles.parquet",
+        "coverage_path": PROCESSED_DIR / "wide_midfield_template_coverage.csv",
+        "mirrored_overarching": True,
+    },
+    "Winger": {
+        "profile_path": PROCESSED_DIR / "winger_player_zone_profiles.parquet",
+        "coverage_path": PROCESSED_DIR / "winger_template_coverage.csv",
+        "mirrored_overarching": True,
+    },
+    "Forward": {
+        "profile_path": PROCESSED_DIR / "forward_player_zone_profiles.parquet",
+        "coverage_path": PROCESSED_DIR / "forward_template_coverage.csv",
+        "mirrored_overarching": True,
+    },
+}
+DEFAULT_PLAYERS = {
+    "Centre-back": "Murillo",
+    "Full-back": "N. Williams",
+    "Wing-back": "N. Williams",
+    "Goalkeeper": "M. Sels",
+    "Central midfield": "E. Anderson",
+    "Attacking midfield": "M. Gibbs-White",
+    "Wide midfield": "O. Hutchinson",
+    "Winger": "D. Ndoye",
+    "Forward": "Igor Jesus",
+}
+
 VIEW_MATCH = "Match explorer"
 VIEW_COMPARISON = "League comparison"
 COMPARISON_LAYOUTS = {
@@ -38,6 +97,22 @@ def format_ordinal(value: float) -> str:
         else {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
     )
     return f"{number}{suffix}"
+
+
+def format_template_group_label(
+    template_group: str,
+    position_group: str,
+    has_role_specific_options: bool,
+) -> str:
+    """Return an unambiguous display label without changing stored identifiers."""
+    if template_group == position_group and has_role_specific_options:
+        return f"All {position_group.lower()} roles (side-normalised)"
+    if (
+        position_group == "Attacking midfield"
+        and template_group == "Attacking midfielder"
+    ):
+        return "Central attacking midfielder"
+    return template_group
 
 
 st.set_page_config(
@@ -58,9 +133,25 @@ def load_match_data() -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 @st.cache_data
-def load_centre_back_profiles() -> pd.DataFrame:
-    """Load league centre-back player profiles for comparison."""
-    return pd.read_parquet(CB_PROFILE_PATH)
+def load_comparison_profiles(
+    position_group: str,
+    profile_path: str,
+    coverage_path: str | None,
+) -> pd.DataFrame:
+    """Load one position group and retain only available templates."""
+    profiles = pd.read_parquet(profile_path)
+    if "template_group" not in profiles.columns:
+        profiles["template_group"] = position_group
+        profiles["template_scope"] = "position_group"
+    if coverage_path is not None:
+        coverage = pd.read_csv(coverage_path)
+        available_groups = coverage.loc[
+            coverage["template_available"], "template_group"
+        ]
+        profiles = profiles.loc[
+            profiles["template_group"].isin(available_groups)
+        ].copy()
+    return profiles
 
 
 heading_col, view_col = st.columns([1.6, 1], vertical_alignment="bottom")
@@ -202,43 +293,98 @@ if selected_view == VIEW_MATCH:
         )
 
 else:
-    if not CB_PROFILE_PATH.exists():
+    available_position_groups = [
+        position_group
+        for position_group, source in COMPARISON_SOURCES.items()
+        if source["profile_path"].exists()
+        and (
+            source["coverage_path"] is None
+            or source["coverage_path"].exists()
+        )
+    ]
+    if not available_position_groups:
         st.error(
-            "Centre-back profiles are missing. Run "
-            "`.venv/bin/python scripts/build_centre_back_templates.py` from the project root."
+            "Position profiles are missing. Build the league templates from the project root."
         )
         st.stop()
 
-    player_profiles = load_centre_back_profiles()
+    control_col_1, control_col_2, control_col_3, control_col_4 = st.columns(
+        [1.05, 1.25, 1.25, 1.15],
+        vertical_alignment="bottom",
+        gap="small",
+    )
+    with control_col_1:
+        comparison_position = st.selectbox(
+            "Position group",
+            available_position_groups,
+            index=available_position_groups.index("Centre-back"),
+            key="comparison_position",
+        )
+
+    source = COMPARISON_SOURCES[comparison_position]
+    player_profiles = load_comparison_profiles(
+        comparison_position,
+        str(source["profile_path"]),
+        (
+            str(source["coverage_path"])
+            if source["coverage_path"] is not None
+            else None
+        ),
+    )
     forest_profiles = player_profiles.loc[
         player_profiles["teams"].str.contains("Nottingham Forest", na=False)
     ]
+    forest_template_groups = set(forest_profiles["template_group"])
+    template_groups = sorted(
+        forest_template_groups,
+        key=lambda group: (group != comparison_position, group),
+    )
+    if not template_groups:
+        st.warning(
+            "No Nottingham Forest profiles are available for this position group.",
+            title="No Forest comparison",
+            icon=":material/info:",
+        )
+        st.stop()
+
+    with control_col_2:
+        comparison_template_group = st.selectbox(
+            "Template group",
+            template_groups,
+            index=0,
+            format_func=lambda group: format_template_group_label(
+                group,
+                comparison_position,
+                len(template_groups) > 1,
+            ),
+            key="comparison_template_group",
+        )
+
+    selected_group_profiles = forest_profiles.loc[
+        forest_profiles["template_group"].eq(comparison_template_group)
+    ]
     forest_players = (
-        forest_profiles[["player_id", "player_name"]]
+        selected_group_profiles[["player_id", "player_name"]]
         .drop_duplicates()
         .sort_values("player_name")
     )
     player_lookup = dict(
         zip(forest_players["player_name"], forest_players["player_id"])
     )
-
-    control_col_1, control_col_2 = st.columns(
-        2,
-        vertical_alignment="bottom",
-        gap="small",
-    )
-    with control_col_1:
+    player_names = list(player_lookup)
+    default_player = DEFAULT_PLAYERS.get(comparison_position)
+    with control_col_3:
         comparison_player = st.selectbox(
-            "Forest centre-back",
-            list(player_lookup),
+            "Forest player",
+            player_names,
             index=(
-                list(player_lookup).index("Murillo")
-                if "Murillo" in player_lookup
+                player_names.index(default_player)
+                if default_player in player_lookup
                 else 0
             ),
             key="comparison_player",
         )
-    with control_col_2:
+    with control_col_4:
         comparison_layout_label = st.segmented_control(
             "Zone layout",
             list(COMPARISON_LAYOUTS),
@@ -252,15 +398,35 @@ else:
         player_profiles,
         player_lookup[comparison_player],
         COMPARISON_LAYOUTS[comparison_layout_label],
+        template_group=comparison_template_group,
     )
+    template_scope = str(
+        selected_group_profiles.loc[
+            selected_group_profiles["player_id"].eq(
+                player_lookup[comparison_player]
+            ),
+            "template_scope",
+        ].iloc[0]
+    )
+    if source["mirrored_overarching"] and template_scope in {
+        "position_group",
+        "role_normalised",
+    }:
+        st.caption(
+            "Overarching role-normalised comparison: right-sided appearances "
+            "are mirrored onto the left before averaging."
+        )
+    elif template_scope in {"role_specific", "side_specific"}:
+        st.caption("Role-specific comparison using the original pitch coordinates.")
 
     if comparison.provisional:
         st.warning(
             (
                 f"{comparison.player_name} has {comparison.eligible_appearances} eligible "
-                f"centre-back appearances, below the {comparison.minimum_template_appearances}-"
-                "appearance template threshold. The comparison is shown, but the player did "
-                "not contribute to the league baseline."
+                f"{comparison_template_group.lower()} appearances, below the "
+                f"{comparison.minimum_template_appearances}-appearance template threshold. "
+                "The comparison is shown, but the player did not contribute to the "
+                "league baseline."
             ),
             title="Provisional player profile",
             icon=":material/info:",
@@ -280,7 +446,10 @@ else:
         "Typicality percentile",
         format_ordinal(comparison.similarity_percentile),
         border=False,
-        help="Rank of the similarity score among qualified league centre-backs.",
+        help=(
+            "Rank of the similarity score among qualified league "
+            f"{comparison_template_group.lower()} profiles."
+        ),
     )
     metric_col_3.metric(
         "Eligible appearances",
@@ -288,7 +457,7 @@ else:
         border=False,
         help=(
             f"{format_ordinal(comparison.appearance_count_percentile)} percentile among all "
-            "centre-back player profiles."
+            f"{comparison_template_group.lower()} player profiles."
         ),
     )
     metric_col_4.metric(
@@ -297,21 +466,22 @@ else:
         border=False,
         help=(
             f"{format_ordinal(comparison.action_count_percentile)} percentile among all "
-            "centre-back player profiles."
+            f"{comparison_template_group.lower()} player profiles."
         ),
     )
     comparison_figure = build_player_template_comparison_figure(
         comparison.zone_comparison,
         comparison.player_name,
         comparison.layout,
+        baseline_label=f"League {comparison_template_group.lower()} baseline",
     )
     with st.container(horizontal_alignment="center"):
         st.pyplot(
             comparison_figure,
             width=1200,
             alt=(
-                f"{comparison.player_name} action-location profile, league centre-back "
-                "baseline, and zone differences"
+                f"{comparison.player_name} action-location profile, league "
+                f"{comparison_template_group.lower()} baseline, and zone differences"
             ),
         )
     close_figure(comparison_figure)
@@ -361,23 +531,35 @@ else:
                 "Peer p25 (%)": st.column_config.NumberColumn(format="%.1f"),
                 "Peer p75 (%)": st.column_config.NumberColumn(format="%.1f"),
             },
-            alt=f"Zone-by-zone centre-back template comparison for {comparison.player_name}",
+            alt=(
+                f"Zone-by-zone {comparison_template_group.lower()} template "
+                f"comparison for {comparison.player_name}"
+            ),
         )
 
     with st.expander("How this comparison is calculated"):
         baseline_description = (
-            f"the other {comparison.baseline_player_count} qualified league centre-backs"
+            f"the other {comparison.baseline_player_count} qualified league "
+            f"{comparison_template_group.lower()} profiles"
             if comparison.baseline_method == "leave_one_out"
-            else f"all {comparison.baseline_player_count} qualified league centre-backs"
+            else f"all {comparison.baseline_player_count} qualified league "
+            f"{comparison_template_group.lower()} profiles"
         )
         st.markdown(
             f"""
-            - A player's profile is the equal-weighted average of their eligible centre-back appearances.
+            - A player's profile is the equal-weighted average of their eligible appearances in the selected template group.
             - This player's baseline is the equal-weighted mean of {baseline_description}.
             - Zone difference is `player share − baseline share`, shown in percentage points.
             - Similarity is `100 × (1 − total variation distance)` across all zones.
             - A higher similarity score means a more conventional spatial profile, not a better player.
             - Zone percentiles compare the player's share with the independent peer distribution.
-            - Only high-confidence centre-back appearances of at least 60 minutes are used.
+            - Only high-confidence mapped appearances of at least 60 minutes are used.
             """
         )
+
+    st.info(
+        "Defensive midfield is not available because fewer than two league players "
+        "have five eligible appearances in that mapped position group.",
+        title="Currently unavailable template",
+        icon=":material/info:",
+    )

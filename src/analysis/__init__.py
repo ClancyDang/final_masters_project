@@ -16,6 +16,17 @@ from .player_template_comparison import (
     empirical_percentile,
     total_variation_similarity,
 )
+from .position_group_templates import (
+    POSITION_GROUP_ROLES,
+    PositionGroupTemplateResult,
+    build_position_group_templates,
+    write_position_group_template_outputs,
+)
+from .position_group_validation import (
+    PositionGroupValidationResult,
+    build_position_group_validation,
+    write_position_group_validation_outputs,
+)
 from .wide_defender_templates import (
     WideDefenderTemplateResult,
     build_wide_defender_templates,
@@ -38,6 +49,13 @@ __all__ = [
     "compare_player_to_template",
     "empirical_percentile",
     "total_variation_similarity",
+    "POSITION_GROUP_ROLES",
+    "PositionGroupTemplateResult",
+    "build_position_group_templates",
+    "write_position_group_template_outputs",
+    "PositionGroupValidationResult",
+    "build_position_group_validation",
+    "write_position_group_validation_outputs",
     "WideDefenderTemplateResult",
     "build_wide_defender_templates",
     "write_wide_defender_template_outputs",

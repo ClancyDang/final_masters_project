@@ -308,6 +308,7 @@ def build_player_template_comparison_figure(
     zone_comparison: pd.DataFrame,
     player_name: str,
     layout: str,
+    baseline_label: str = "League baseline",
 ):
     """Return player, independent baseline, and difference pitch maps."""
     required = {
@@ -359,7 +360,7 @@ def build_player_template_comparison_figure(
             sequential_max,
         ),
         (
-            "League CB baseline",
+            baseline_label,
             template_bins,
             "template_share",
             "cividis",

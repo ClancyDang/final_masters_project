@@ -2,7 +2,7 @@
 
 ScoutAgent is a football scouting and recruitment-analysis application being developed as a Final Master Project for the Master's programme in Sport Analysis & Analytics at Universidad Europea de Madrid and the Real Madrid Graduate School.
 
-The current prototype uses Nottingham Forest as its initial club context. It creates interactive defender action-location maps and compares Forest centre-backs with a 2025/26 Premier League centre-back template.
+The current prototype uses Nottingham Forest as its initial club context. It creates interactive defender action-location maps and compares Forest players with validated 2025/26 Premier League positional templates.
 
 ## Prototype status
 
@@ -13,7 +13,7 @@ The application currently allows a user to:
 - View a positional 20-zone map, a traditional 18-zone map or both.
 - Inspect minutes played and the number of direct actions.
 - View zone-level counts and normalized action shares.
-- Compare any Forest centre-back profile with the league template in either zone layout.
+- Compare Forest players with available role-specific or overarching league templates in either zone layout.
 - Inspect zone differences, peer percentiles, sample size and an overall similarity score.
 - Validate the Forest comparison with appearance-level bootstrap intervals, split-half stability, layout robustness and separate pass/defensive-action profiles.
 - Read the current methodology and limitations.
@@ -51,19 +51,25 @@ Do not publish, redistribute or deploy the supplied data without confirming the 
 │   ├── 03_premier_league_pipeline_validation.ipynb
 │   ├── 04_centre_back_template_validation.ipynb
 │   ├── 05_forest_centre_back_results_validation.ipynb
-│   └── 06_wide_defender_results_validation.ipynb
+│   ├── 06_wide_defender_results_validation.ipynb
+│   ├── 07_remaining_position_template_coverage.ipynb
+│   └── 08_remaining_position_results_validation.ipynb
 ├── scripts/
 │   ├── build_centre_back_templates.py
 │   ├── build_league_data.py
+│   ├── build_remaining_position_templates.py
 │   ├── build_streamlit_data.py
 │   ├── build_wide_defender_templates.py
 │   ├── validate_forest_centre_backs.py
+│   ├── validate_forest_position_groups.py
 │   └── validate_forest_wide_defenders.py
 ├── src/
 │   ├── analysis/
 │   │   ├── centre_back_templates.py
 │   │   ├── centre_back_validation.py
 │   │   ├── player_template_comparison.py
+│   │   ├── position_group_templates.py
+│   │   ├── position_group_validation.py
 │   │   ├── wide_defender_templates.py
 │   │   └── wide_defender_validation.py
 │   ├── data/
@@ -77,6 +83,7 @@ Do not publish, redistribute or deploy the supplied data without confirming the 
 │   ├── test_centre_back_templates.py
 │   ├── test_centre_back_validation.py
 │   ├── test_player_template_comparison.py
+│   ├── test_position_group_templates.py
 │   ├── test_premier_league_pipeline.py
 │   ├── test_positional_maps.py
 │   └── test_wide_defender_templates.py
@@ -204,6 +211,37 @@ uncertainty, repeated split-half stability, 18-versus-20-zone sensitivity and
 pass/defensive-action sensitivity. Review the outputs in
 `notebooks/06_wide_defender_results_validation.ipynb`.
 
+## Build the remaining position templates
+
+After building the league-wide appearance and action tables, run:
+
+```bash
+.venv/bin/python scripts/build_remaining_position_templates.py
+```
+
+This creates role-specific and overarching templates for goalkeepers, defensive
+midfielders, central midfielders, attacking midfielders, wide midfielders,
+wingers and forwards. Right-sided roles are mirrored only in the overarching
+profiles; original coordinates remain available in the role-specific profiles.
+A league template requires at least two players with five eligible appearances,
+so leave-one-out comparison remains possible. Review coverage in
+`notebooks/07_remaining_position_template_coverage.ipynb`.
+
+## Validate the remaining supported positions
+
+Run:
+
+```bash
+.venv/bin/python scripts/validate_forest_position_groups.py
+```
+
+This validates Forest goalkeeper, central-midfield, attacking-midfield,
+wide-midfield, winger and forward profiles using bootstrap uncertainty,
+split-half stability, layout robustness and separate pass/defensive-action
+templates. Defensive midfield is excluded because no valid peer baseline exists.
+Review the findings in
+`notebooks/08_remaining_position_results_validation.ipynb`.
+
 ## Run the Streamlit application
 
 ```bash
@@ -244,7 +282,7 @@ They validate coordinate handling, zone counts, normalized shares, traditional z
 
 ## Current limitations
 
-- The Streamlit match explorer displays Nottingham Forest defenders, while its comparison view currently focuses on Forest centre-backs; the validated processing pipeline covers all 20 Premier League teams.
+- The Streamlit match explorer displays Nottingham Forest defenders; the comparison view covers centre-backs, full-backs, wing-backs, goalkeepers, supported midfield roles, wingers and forwards.
 - The position mapping currently classifies starting formation slots; substitute slot `0` and later in-match role changes still need additional provider events.
 - Two Forest match payloads are missing.
 - Carries have not been inferred.
@@ -252,7 +290,8 @@ They validate coordinate handling, zone counts, normalized shares, traditional z
 - Jair Cunha has only three eligible appearances and remains provisional; his profile cannot yet support split-half validation.
 - No Forest player currently has five eligible wing-back appearances, so all Forest wing-back comparisons will initially be provisional.
 - The full-back zone layouts broadly agree but are less interchangeable than the centre-back layouts; both should remain available in interpretation.
-- The centre-back comparison has been validated as a reference implementation; role clusters, remaining position groups and scouting-performance measures have not yet been added.
+- The current data cannot support a defensive-midfield league template: only one player reaches five overarching appearances.
+- Positional-template comparison is available across the supported groups; role clusters and scouting-performance measures have not yet been added.
 - Public deployment is blocked until data-sharing permissions are confirmed.
 
 ## Documentation
@@ -265,6 +304,8 @@ They validate coordinate handling, zone counts, normalized shares, traditional z
 - [Centre-back template validation notebook](notebooks/04_centre_back_template_validation.ipynb)
 - [Forest centre-back results validation notebook](notebooks/05_forest_centre_back_results_validation.ipynb)
 - [Wide-defender results validation notebook](notebooks/06_wide_defender_results_validation.ipynb)
+- [Remaining position-template coverage notebook](notebooks/07_remaining_position_template_coverage.ipynb)
+- [Remaining position results validation notebook](notebooks/08_remaining_position_results_validation.ipynb)
 - [Third-party mapping attribution](THIRD_PARTY_NOTICES.md)
 
 ## Project direction
