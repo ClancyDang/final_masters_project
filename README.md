@@ -24,7 +24,7 @@ The event data used by this project is licensed and is **not included in this re
 To reproduce the full local prototype, an authorized user must place the supplied package at:
 
 ```text
-raw eventing data for FMP/
+data/raw/eventing_FMP/
 ```
 
 The current Forest dataset contains 38 indexed fixtures and 36 available event payloads. Two match payloads are missing.
@@ -43,14 +43,19 @@ Do not publish, redistribute or deploy the supplied data without confirming the 
 │   ├── day_1.md
 │   └── initial_plan_and_goal.md
 ├── notebooks/
-│   └── 01_forest_defender_data_import.ipynb
+│   ├── 01_forest_defender_data_import.ipynb
+│   └── 02_position_mapping_validation.ipynb
 ├── scripts/
 │   └── build_streamlit_data.py
 ├── src/
+│   ├── positions/
+│   │   └── formation_mapping.py
 │   └── visualizations/
 │       └── positional_maps.py
 ├── tests/
+│   ├── test_formation_mapping.py
 │   └── test_positional_maps.py
+├── THIRD_PARTY_NOTICES.md
 ├── .python-version
 ├── requirements.txt
 ├── requirements-dev.txt
@@ -117,11 +122,13 @@ They validate coordinate handling, zone counts, normalized shares and traditiona
 - Zone values represent shares of direct-action starting locations.
 - The positional map contains 20 tactical zones.
 - The traditional map contains 18 equal zones arranged as six length bands by three width bands.
+- Provider formation codes and lineup slots are decoded separately from the project's standardised position rules.
+- Unknown formations, unknown provider positions and bench slot `0` remain explicitly unresolved rather than being guessed.
 
 ## Current limitations
 
 - The initial analysis includes Nottingham Forest defenders only.
-- The provider's broad `Defender` label does not distinguish centre-backs, full-backs and wing-backs.
+- The position mapping currently classifies starting formation slots; substitute slot `0` and later in-match role changes still need additional provider events.
 - Two Forest match payloads are missing.
 - Carries have not been inferred.
 - High-volume passes may dominate the combined direct-action map.
@@ -133,6 +140,8 @@ They validate coordinate handling, zone counts, normalized shares and traditiona
 - [Initial plan and end goal](documentation/initial_plan_and_goal.md)
 - [Day 1 progress and learning log](documentation/day_1.md)
 - [Source notebook](notebooks/01_forest_defender_data_import.ipynb)
+- [Position-mapping validation notebook](notebooks/02_position_mapping_validation.ipynb)
+- [Third-party mapping attribution](THIRD_PARTY_NOTICES.md)
 
 ## Project direction
 

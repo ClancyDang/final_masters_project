@@ -5,7 +5,7 @@ The raw and processed football data used by ScoutAgent is licensed and is not co
 Authorized users should place the supplied raw package at the project root as:
 
 ```text
-raw/data/eventing_FMP
+data/raw/eventing_FMP
 ```
 
 Running `scripts/build_streamlit_data.py` creates local application files under `data/processed/`. That directory is intentionally ignored by Git.
