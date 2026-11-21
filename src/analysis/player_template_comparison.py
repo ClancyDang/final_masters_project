@@ -152,7 +152,11 @@ def compare_player_to_template(
     if peer_matrix.empty:
         raise ValueError("No peer players remain to form the comparison baseline")
 
-    selected_profile = matrix.loc[player_id]
+    selected_profile = pd.Series(
+        matrix.loc[[player_id]].iloc[0],
+        index=matrix.columns,
+        dtype=float,
+    )
     baseline_profile = peer_matrix.mean(axis=0)
     similarity_score = total_variation_similarity(
         selected_profile,
