@@ -13,6 +13,10 @@ LAYOUT_BOTH = "Both layouts"
 LAYOUT_POSITIONAL = "Positional 20-zone"
 LAYOUT_TRADITIONAL = "Traditional 18-zone"
 LAYOUT_OPTIONS = (LAYOUT_BOTH, LAYOUT_POSITIONAL, LAYOUT_TRADITIONAL)
+PROFILE_LAYOUT_LABELS = {
+    "positional_20": LAYOUT_POSITIONAL,
+    "traditional_18": LAYOUT_TRADITIONAL,
+}
 
 
 def _validate_actions(actions: pd.DataFrame, appearance: pd.Series) -> None:
@@ -238,3 +242,162 @@ def build_action_location_figure(
 def close_figure(figure) -> None:
     """Release a Matplotlib figure after Streamlit has rendered it."""
     plt.close(figure)
+
+
+def _profile_bins(
+    pitch: VerticalPitch,
+    zone_comparison: pd.DataFrame,
+    value_column: str,
+    layout: str,
+) -> dict:
+    if layout == "positional_20":
+        return pitch.bin_statistic_positional(
+            zone_comparison["center_x"],
+            zone_comparison["center_y"],
+            values=zone_comparison[value_column],
+            statistic="sum",
+            positional="full",
+            normalize=False,
+        )
+    if layout == "traditional_18":
+        return pitch.bin_statistic(
+            zone_comparison["center_x"],
+            zone_comparison["center_y"],
+            values=zone_comparison[value_column],
+            statistic="sum",
+            bins=(6, 3),
+            normalize=False,
+        )
+    raise ValueError(f"Unknown profile layout: {layout}")
+
+
+def _draw_profile_heatmap(
+    pitch: VerticalPitch,
+    bins: dict,
+    axis,
+    layout: str,
+    cmap: str,
+    vmin: float,
+    vmax: float,
+) -> None:
+    if layout == "positional_20":
+        pitch.heatmap_positional(
+            bins,
+            ax=axis,
+            cmap=cmap,
+            edgecolors="#22312b",
+            vmin=vmin,
+            vmax=vmax,
+        )
+    else:
+        pitch.heatmap(
+            bins,
+            ax=axis,
+            cmap=cmap,
+            edgecolors="#22312b",
+            vmin=vmin,
+            vmax=vmax,
+        )
+
+
+def build_player_template_comparison_figure(
+    zone_comparison: pd.DataFrame,
+    player_name: str,
+    layout: str,
+):
+    """Return player, independent baseline, and difference pitch maps."""
+    required = {
+        "zone_id",
+        "center_x",
+        "center_y",
+        "player_share",
+        "template_share",
+        "difference",
+    }
+    missing = required.difference(zone_comparison.columns)
+    if missing:
+        raise ValueError(f"Zone comparison is missing columns: {sorted(missing)}")
+    if layout not in PROFILE_LAYOUT_LABELS:
+        raise ValueError(f"Unknown profile layout: {layout}")
+    expected_zones = 20 if layout == "positional_20" else 18
+    if len(zone_comparison) != expected_zones:
+        raise ValueError(f"{layout} requires exactly {expected_zones} zones")
+
+    pitch = VerticalPitch(
+        pitch_type="opta",
+        pitch_color="#22312b",
+        line_color="white",
+        line_zorder=2,
+    )
+    player_bins = _profile_bins(pitch, zone_comparison, "player_share", layout)
+    template_bins = _profile_bins(pitch, zone_comparison, "template_share", layout)
+    difference_bins = _profile_bins(pitch, zone_comparison, "difference", layout)
+
+    sequential_max = max(
+        float(zone_comparison["player_share"].max()),
+        float(zone_comparison["template_share"].max()),
+    )
+    difference_max = max(float(zone_comparison["difference"].abs().max()), 0.01)
+    label_effects = [
+        path_effects.Stroke(linewidth=2.5, foreground="black"),
+        path_effects.Normal(),
+    ]
+
+    figure, axes = pitch.draw(nrows=1, ncols=3, figsize=(15, 8.5))
+    axes = np.atleast_1d(axes)
+    panels = [
+        ("Player profile", player_bins, "player_share", "cividis", 0, sequential_max),
+        (
+            "League CB baseline",
+            template_bins,
+            "template_share",
+            "cividis",
+            0,
+            sequential_max,
+        ),
+        (
+            "Difference from baseline",
+            difference_bins,
+            "difference",
+            "RdBu_r",
+            -difference_max,
+            difference_max,
+        ),
+    ]
+
+    for axis, (title, bins, value_column, cmap, vmin, vmax) in zip(axes, panels):
+        _draw_profile_heatmap(pitch, bins, axis, layout, cmap, vmin, vmax)
+        for zone in zone_comparison.itertuples(index=False):
+            value = getattr(zone, value_column)
+            value_label = f"{value:+.1%}" if value_column == "difference" else f"{value:.1%}"
+            pitch.annotate(
+                f"Z{zone.zone_id:02d}\n{value_label}",
+                xy=(zone.center_x, zone.center_y),
+                ax=axis,
+                color="white",
+                fontsize=7.5,
+                fontweight="bold",
+                ha="center",
+                va="center",
+                path_effects=label_effects,
+                zorder=4,
+            )
+        axis.set_title(title, color="white", fontsize=13, pad=8)
+
+    figure.patch.set_facecolor("#22312b")
+    figure.suptitle(
+        f"{player_name} compared with the Premier League centre-back template",
+        color="white",
+        fontsize=16,
+        y=0.985,
+    )
+    figure.text(
+        0.5,
+        0.015,
+        "Difference map: red = higher share than the baseline; blue = lower share.",
+        color="#d9e2df",
+        fontsize=10,
+        ha="center",
+    )
+    figure.subplots_adjust(top=0.79, bottom=0.07, wspace=0.06)
+    return figure

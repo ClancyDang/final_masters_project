@@ -2,7 +2,7 @@
 
 ScoutAgent is a football scouting and recruitment-analysis application being developed as a Final Master Project for the Master's programme in Sport Analysis & Analytics at Universidad Europea de Madrid and the Real Madrid Graduate School.
 
-The current prototype uses Nottingham Forest as its initial club context. It creates interactive defender action-location maps from 2025/26 Premier League event data.
+The current prototype uses Nottingham Forest as its initial club context. It creates interactive defender action-location maps and compares Forest centre-backs with a 2025/26 Premier League centre-back template.
 
 ## Prototype status
 
@@ -13,6 +13,8 @@ The application currently allows a user to:
 - View a positional 20-zone map, a traditional 18-zone map or both.
 - Inspect minutes played and the number of direct actions.
 - View zone-level counts and normalized action shares.
+- Compare any Forest centre-back profile with the league template in either zone layout.
+- Inspect zone differences, peer percentiles, sample size and an overall similarity score.
 - Read the current methodology and limitations.
 
 The maps describe the locations where recorded direct actions began. They do **not** measure continuous player occupancy, which would require tracking data.
@@ -53,7 +55,8 @@ Do not publish, redistribute or deploy the supplied data without confirming the 
 │   └── build_streamlit_data.py
 ├── src/
 │   ├── analysis/
-│   │   └── centre_back_templates.py
+│   │   ├── centre_back_templates.py
+│   │   └── player_template_comparison.py
 │   ├── data/
 │   │   └── premier_league_pipeline.py
 │   ├── positions/
@@ -63,6 +66,7 @@ Do not publish, redistribute or deploy the supplied data without confirming the 
 ├── tests/
 │   ├── test_formation_mapping.py
 │   ├── test_centre_back_templates.py
+│   ├── test_player_template_comparison.py
 │   ├── test_premier_league_pipeline.py
 │   └── test_positional_maps.py
 ├── THIRD_PARTY_NOTICES.md
@@ -156,7 +160,7 @@ The initial tests use Python's standard-library test runner:
 MPLBACKEND=Agg .venv/bin/python -m unittest discover -s tests -v
 ```
 
-They validate coordinate handling, zone counts, normalized shares and traditional zone orientation without requiring the licensed data.
+They validate coordinate handling, zone counts, normalized shares, traditional zone orientation, template averaging, leave-one-out baselines and similarity calculations without requiring the licensed data.
 
 ## Method summary
 
@@ -164,22 +168,24 @@ They validate coordinate handling, zone counts, normalized shares and traditiona
 - Shot locations were checked to confirm that teams consistently attack toward `x = 100`.
 - Administrative and invalid spatial records are excluded.
 - The initial eligibility rule is at least 60 provider minutes.
-- There is currently no minimum-action exclusion or low-sample warning.
+- There is currently no minimum-action exclusion. Profiles below five eligible appearances are flagged as provisional and do not contribute to the league template.
 - Zone values represent shares of direct-action starting locations.
 - The positional map contains 20 tactical zones.
 - The traditional map contains 18 equal zones arranged as six length bands by three width bands.
 - Provider formation codes and lineup slots are decoded separately from the project's standardised position rules.
 - Unknown formations, unknown provider positions and bench slot `0` remain explicitly unresolved rather than being guessed.
 - Each match profile is normalized to 100%; matches are averaged equally within a player, and qualifying players are averaged equally within the centre-back league template.
+- Qualified Forest players are compared with a leave-one-out template; provisional players are compared with the full qualified template.
+- Overall similarity is `100 × (1 − total variation distance)` and describes spatial typicality, not player quality.
 
 ## Current limitations
 
-- The Streamlit interface still displays Nottingham Forest defenders only; the validated processing pipeline now covers all 20 Premier League teams.
+- The Streamlit match explorer displays Nottingham Forest defenders, while its comparison view currently focuses on Forest centre-backs; the validated processing pipeline covers all 20 Premier League teams.
 - The position mapping currently classifies starting formation slots; substitute slot `0` and later in-match role changes still need additional provider events.
 - Two Forest match payloads are missing.
 - Carries have not been inferred.
 - High-volume passes may dominate the combined direct-action map.
-- The first league-wide centre-back templates now exist locally; player-to-template comparisons and role clusters have not yet been added to the application.
+- The first league-wide centre-back template comparison is available; role clusters and scouting-performance measures have not yet been added.
 - Public deployment is blocked until data-sharing permissions are confirmed.
 
 ## Documentation
