@@ -14,4 +14,7 @@ Running `scripts/build_league_data.py` creates the league-wide appearance,
 positional-action, centre-back and quality-check outputs under the same ignored
 `data/processed/` directory.
 
+Running `scripts/build_centre_back_templates.py` creates ignored appearance-zone,
+player-zone and league-template outputs for the 18-zone and 20-zone layouts.
+
 Do not publish or redistribute raw or processed event data without explicit permission from the provider and the university.

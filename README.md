@@ -45,11 +45,15 @@ Do not publish, redistribute or deploy the supplied data without confirming the 
 ├── notebooks/
 │   ├── 01_forest_defender_data_import.ipynb
 │   ├── 02_position_mapping_validation.ipynb
-│   └── 03_premier_league_pipeline_validation.ipynb
+│   ├── 03_premier_league_pipeline_validation.ipynb
+│   └── 04_centre_back_template_validation.ipynb
 ├── scripts/
+│   ├── build_centre_back_templates.py
 │   ├── build_league_data.py
 │   └── build_streamlit_data.py
 ├── src/
+│   ├── analysis/
+│   │   └── centre_back_templates.py
 │   ├── data/
 │   │   └── premier_league_pipeline.py
 │   ├── positions/
@@ -58,6 +62,7 @@ Do not publish, redistribute or deploy the supplied data without confirming the 
 │       └── positional_maps.py
 ├── tests/
 │   ├── test_formation_mapping.py
+│   ├── test_centre_back_templates.py
 │   ├── test_premier_league_pipeline.py
 │   └── test_positional_maps.py
 ├── THIRD_PARTY_NOTICES.md
@@ -118,6 +123,23 @@ data/processed/premier_league_pipeline_quality_checks.csv
 
 All four outputs remain local and ignored by Git. The current package contains 380 indexed fixtures and 361 available event payloads; missing payloads are reported rather than silently dropped.
 
+## Build the centre-back templates
+
+After building the league-wide data, run:
+
+```bash
+.venv/bin/python scripts/build_centre_back_templates.py
+```
+
+This creates one normalized zone profile per appearance, one equal-appearance-weighted profile per centre-back and equal-player-weighted league templates for both layouts. Players need at least five eligible centre-back appearances to define the league template. The ignored outputs are:
+
+```text
+data/processed/centre_back_appearance_zone_profiles.parquet
+data/processed/centre_back_player_zone_profiles.parquet
+data/processed/centre_back_league_templates.parquet
+data/processed/centre_back_template_quality_checks.csv
+```
+
 ## Run the Streamlit application
 
 ```bash
@@ -148,6 +170,7 @@ They validate coordinate handling, zone counts, normalized shares and traditiona
 - The traditional map contains 18 equal zones arranged as six length bands by three width bands.
 - Provider formation codes and lineup slots are decoded separately from the project's standardised position rules.
 - Unknown formations, unknown provider positions and bench slot `0` remain explicitly unresolved rather than being guessed.
+- Each match profile is normalized to 100%; matches are averaged equally within a player, and qualifying players are averaged equally within the centre-back league template.
 
 ## Current limitations
 
@@ -156,7 +179,7 @@ They validate coordinate handling, zone counts, normalized shares and traditiona
 - Two Forest match payloads are missing.
 - Carries have not been inferred.
 - High-volume passes may dominate the combined direct-action map.
-- No league-wide positional templates or role clusters have been created yet.
+- The first league-wide centre-back templates now exist locally; player-to-template comparisons and role clusters have not yet been added to the application.
 - Public deployment is blocked until data-sharing permissions are confirmed.
 
 ## Documentation
@@ -166,6 +189,7 @@ They validate coordinate handling, zone counts, normalized shares and traditiona
 - [Source notebook](notebooks/01_forest_defender_data_import.ipynb)
 - [Position-mapping validation notebook](notebooks/02_position_mapping_validation.ipynb)
 - [Premier League pipeline validation notebook](notebooks/03_premier_league_pipeline_validation.ipynb)
+- [Centre-back template validation notebook](notebooks/04_centre_back_template_validation.ipynb)
 - [Third-party mapping attribution](THIRD_PARTY_NOTICES.md)
 
 ## Project direction
